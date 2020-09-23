@@ -1,4 +1,4 @@
 # roboticaGC
-Proyecto robótica 2020/n
+Proyecto robótica 2020 
 Gonzalo Bueno Rodriguez
 Carlos Garcia Perez
