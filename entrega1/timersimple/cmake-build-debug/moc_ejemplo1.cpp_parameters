@@ -1,0 +1,4 @@
+-I/home/salabeta/Robotica_GC/timersimple/cmake-build-debug
+-o
+/home/salabeta/Robotica_GC/timersimple/cmake-build-debug/moc_ejemplo1.cpp
+/home/salabeta/Robotica_GC/timersimple/ejemplo1.h
