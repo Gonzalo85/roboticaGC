@@ -15,30 +15,30 @@ class Timer
         Timer(){};
 
         template <class callable>        
-        void connect(callable&& f)
+        void connect(callable&& f)//objeto callable
         {
-			std::thread([=]() 
+			std::thread([=]() //hilo
             {
-                while(true)
+                while(true)//bucle infinito
                 {
 					if(go.load())
-						std::invoke(f);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(period.load()));
+						std::invoke(f);//invoca al objeto f
+                    std::this_thread::sleep_for(std::chrono::milliseconds(period.load()));//manda a dormir durante el periodo
                 }
-            }).detach();
+            }).detach();//separa el hilo
         };
         
-        void start(int p)
+        void start(int p)//comienzo del timer
         {
-			period.store(p);
+			period.store(p);//almacena periodo
 			go.store(true);
         };
         
-        void stop() { go.store(!go); };
-		void setPeriod(int p) { period.store(p) ;};
+        void stop() { go.store(!go); };//parar el timer(invertimos boolean go)
+		void setPeriod(int p) { period.store(p) ;};//poner periodo
         
     private:
-        std::atomic_bool go = false;
+        std::atomic_bool go = false;//booleano atomico para sincronización
 		std::atomic_int period = 0;
         
     

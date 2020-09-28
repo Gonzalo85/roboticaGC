@@ -9,7 +9,7 @@ ejemplo1::ejemplo1(): Ui_Counter()
 	setupUi(this);
 	show();
 	connect(button, SIGNAL(clicked()), this, SLOT(doButton()));
-    connect(Slider, SIGNAL (sliderReleased()), this, SLOT(cambiar()));
+    connect(Slider, SIGNAL (sliderReleased()), this, SLOT(cambiar()));//conexion de ui con funcion
     mytimer.connect(std::bind(&ejemplo1::cuenta, this));
     mytimer.start(500);
     t1 = clock();
