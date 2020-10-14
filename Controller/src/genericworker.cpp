@@ -1,5 +1,5 @@
 /*
- *    Copyright (C)2018 by YOUR NAME HERE
+ *    Copyright (C) 2020 by YOUR NAME HERE
  *
  *    This file is part of RoboComp
  *
@@ -16,85 +16,42 @@
  *    You should have received a copy of the GNU General Public License
  *    along with RoboComp.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "specificworker.h"
-
+#include "genericworker.h"
 /**
 * \brief Default constructor
 */
-SpecificWorker::SpecificWorker(MapPrx& mprx) : GenericWorker(mprx)
+GenericWorker::GenericWorker(MapPrx& mprx) : QObject()
 {
+
+	differentialrobot_proxy = (*(RoboCompDifferentialRobot::DifferentialRobotPrx*)mprx["DifferentialRobotProxy"]);
+	laser_proxy = (*(RoboCompLaser::LaserPrx*)mprx["LaserProxy"]);
+
+	mutex = new QMutex(QMutex::Recursive);
+
+	Period = BASIC_PERIOD;
+	connect(&timer, SIGNAL(timeout()), this, SLOT(compute()));
 
 }
 
 /**
 * \brief Default destructor
 */
-SpecificWorker::~SpecificWorker()
+GenericWorker::~GenericWorker()
 {
 
 }
-
-bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
+void GenericWorker::killYourSelf()
 {
-//       THE FOLLOWING IS JUST AN EXAMPLE
-//	To use innerModelPath parameter you should uncomment specificmonitor.cpp readConfig method content
-//	try
-//	{
-//		RoboCompCommonBehavior::Parameter par = params.at("InnerModelPath");
-//		std::string innermodel_path = par.value;
-//		innerModel = new InnerModel(innermodel_path);
-//	}
-//	catch(std::exception e) { qFatal("Error reading config params"); }
-
-
-
-
-    timer.start(Period);
-
-
-    return true;
+	rDebug("Killing myself");
+	emit kill();
 }
-
-void SpecificWorker::compute( )
+/**
+* \brief Change compute period
+* @param per Period in ms
+*/
+void GenericWorker::setPeriod(int p)
 {
-
-    const float threshold = 200;
-    float rot = 1.5707;
-
-
-
-    try
-    {
-        RoboCompLaser::TLaserData ldata = laser_proxy->getLaserData();
-        std::sort( ldata.begin(), ldata.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; }) ;
-
-
-        if( ldata.front().dist < threshold)
-        {
-            differentialrobot_proxy->setSpeedBase(5, rot);
-            usleep(1250000);
-            std::cout << ldata.front().dist << std::endl;
-            differentialrobot_proxy->setSpeedBase(200, 0);
-            usleep(500000);
-            rot = rot + 0.12;
-            if( rot > 3 * 1.5707 )
-            {
-                rot = 1.5707;
-            }
-        }
-
-        else
-        {
-            differentialrobot_proxy->setSpeedBase(200, 0);
-            usleep(500000);
-            std::cout << ldata.front().dist << std::endl;
-        }
-
-
-    }
-    catch(const Ice::Exception &ex)
-    {
-        std::cout << ex << std::endl;
-    }
-
+	rDebug("Period changed"+QString::number(p));
+	Period = p;
+	timer.start(Period);
 }

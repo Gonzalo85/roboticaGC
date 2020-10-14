@@ -44,6 +44,10 @@ public slots:
 	void compute();
 	int startup_check();
 	void initialize(int period);
+    void recto(RoboCompLaser::TLaserData datos, int distancia, int &state);
+    void girar(RoboCompLaser::TLaserData datos, int distancia, int &state);
+    void espiral(RoboCompLaser::TLaserData datos, int distancia, int &state);
+
 private:
 	std::shared_ptr < InnerModel > innerModel;
 	bool startup_check_flag;
