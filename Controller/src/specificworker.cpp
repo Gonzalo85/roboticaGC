@@ -60,30 +60,27 @@ void SpecificWorker::recto(RoboCompLaser::TLaserData datos, int distancia,int &s
         qDebug() << state;
 
     }else{
-        differentialrobot_proxy->setSpeedBase(700,0);
+        differentialrobot_proxy->setSpeedBase(900,0);
         qDebug() << "recto";
         random=rand()%2;
         state = random+1;
-    };
+    }
+    if(datos.front()>4000){
+        state = 1;
+    }
 
 }
 
 void SpecificWorker::girar(RoboCompLaser::TLaserData datos,int distancia, int &state)
 {
     int random = 0;
-    static int aux=1;
     if(datos.front().dist>distancia){
         state = 0;
 
     }else {
-        qDebug() << "girar";
         qDebug() << datos.front().angle;
         random=rand()%2;
-        if(random==0)
-            aux = -1;
-        else
-            aux=1;
-        differentialrobot_proxy->setSpeedBase(0, 0.7)*aux;
+        differentialrobot_proxy->setSpeedBase(0, 1.5);
     }
 
 }
@@ -93,12 +90,33 @@ void SpecificWorker::espiral(RoboCompLaser::TLaserData datos, int distancia, int
         state = 1;
 
     }else{
-        differentialrobot_proxy->setSpeedBase(700, 0.5);
+        differentialrobot_proxy->setSpeedBase(900, 1.2);
         random=rand()%2;
         if(random==0)
          state = 0;
-        qDebug() << "espiral";
     }
+    if(datos.front()>4000){
+        state = 1;
+    }
+}
+
+void SpecificWorker::paredes(RoboCompLaser::TLaserData datos, int distancia, int &state) {
+    static int cont=0;
+    while(state==3){
+        RoboCompLaser::TLaserData datos = laser_proxy->getLaserData();
+        std::sort( datos.begin(), datos.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; });
+        if(datos.front().dist>distancia) {
+            differentialrobot_proxy->setSpeedBase(1000, 0);
+        }else{
+            differentialrobot_proxy->setSpeedBase(0, 1.5);
+        }
+        cont++;
+
+        if (cont>120000){
+            state=0;
+        }
+    }
+
 }
 
 
@@ -122,15 +140,15 @@ void SpecificWorker::initialize(int period)
 //  searchTags(image_gray);
 void SpecificWorker::compute()
 {
-    const int distancia=200;
+    const int distancia=250;
     vector<int> recorrido;
     static RoboCompGenericBase::TBaseState estado;
 
 
     static int i=0;
-    static int state=0;           //0:recto 1:girar 2:espiral
+    static int state=3;           //0:recto 1:girar 2:espiral
     differentialrobot_proxy->getBaseState(estado);
-    differentialrobot_proxy->setSpeedBase(500,0);
+    differentialrobot_proxy->setSpeedBase(900,0);
     RoboCompLaser::TLaserData datos = laser_proxy->getLaserData();
     std::sort( datos.begin(), datos.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; });
 
@@ -146,6 +164,9 @@ void SpecificWorker::compute()
                 break;
             case 2:
                 espiral(datos,distancia, state);
+                break;
+            case 3:                 //Paredes
+                paredes(datos,distancia, state);
                 break;
         }
 	}

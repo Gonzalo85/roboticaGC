@@ -47,6 +47,7 @@ public slots:
     void recto(RoboCompLaser::TLaserData datos, int distancia, int &state);
     void girar(RoboCompLaser::TLaserData datos, int distancia, int &state);
     void espiral(RoboCompLaser::TLaserData datos, int distancia, int &state);
+    void paredes(RoboCompLaser::TLaserData datos, int distancia, int &state);
 
 private:
 	std::shared_ptr < InnerModel > innerModel;
