@@ -12,7 +12,7 @@ SET ( HEADERS
 )
 
 set(CMAKE_CXX_STANDARD 17)
-
-SET (LIBS ${LIBS}  )
+add_definitions(-O3 -march=native  -fmax-errors=1 -std=c++2a )
+SET (LIBS ${LIBS})
 
 

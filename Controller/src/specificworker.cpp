@@ -65,7 +65,7 @@ void SpecificWorker::recto(RoboCompLaser::TLaserData datos, int distancia,int &s
         random=rand()%2;
         state = random+1;
     }
-    if(datos.front()>4000){
+    if(datos.front().dist>=4000){
         state = 1;
     }
 
@@ -95,7 +95,7 @@ void SpecificWorker::espiral(RoboCompLaser::TLaserData datos, int distancia, int
         if(random==0)
          state = 0;
     }
-    if(datos.front()>4000){
+    if(datos.front().dist>=4000){
         state = 1;
     }
 }
@@ -111,8 +111,8 @@ void SpecificWorker::paredes(RoboCompLaser::TLaserData datos, int distancia, int
             differentialrobot_proxy->setSpeedBase(0, 1.5);
         }
         cont++;
-
-        if (cont>120000){
+        qDebug()<<cont;
+        if (cont>200000){
             state=0;
         }
     }
