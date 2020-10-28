@@ -71,6 +71,26 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
+
+    RoboCompGenericBase::TBaseState estado;
+    differentialrobot_proxy->getBaseState(estado);
+
+    if(auto data = target.get() ; data.has_value()){
+        auto d=data.value();
+        std::cout << d.x() << std::endl;
+        std::cout << d.y() << std::endl;
+
+        //Teorema de pitagoras
+        //Lados del triangulo
+        float c1=d.x()-estado.x;
+        float c2=d.y()-estado.z;
+        float hipotenusa= sqrt((c1*c1)+(c2*c2));
+        float angulo1=c1/hipotenusa;
+        float angulo2=c2/hipotenusa;
+
+    }
+
+
 	//computeCODE
 	//QMutexLocker locker(mutex);
 	//try
@@ -96,13 +116,12 @@ int SpecificWorker::startup_check()
 
 
 //SUBSCRIPTION to setPick method from RCISMousePicker interface
-void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick)
-{
-//subscribesToCODE
+void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick) {
+   // std::cout << __FUNCTION__ << myPick.x << std::endl <<myPick.z << std::endl;
+
+    target.put(Eigen::Vector2f(myPick.x, myPick.z));
 
 }
-
-
 
 /**************************************/
 // From the RoboCompDifferentialRobot you can call this methods:

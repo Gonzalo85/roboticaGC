@@ -29,16 +29,46 @@
 
 #include <genericworker.h>
 #include <innermodel/innermodel.h>
+#include "Eigen/Dense"
 
 class SpecificWorker : public GenericWorker
 {
 Q_OBJECT
+    template <typename T>
+    struct Target {
+        T data;
+        std::mutex mutex;
+        bool active = false;
+        bool empty = true;
+
+        void put(const T &Data) {
+            std::lock_guard<std::mutex> guard(mutex);
+            data = Data;
+            active = true;
+            empty = false;
+        }
+
+        std::optional<T> get() {
+            std::lock_guard<std::mutex> guard(mutex);
+            if (active && !empty) {
+                empty = true;
+                return data;
+            } else
+                return {};
+        }
+
+        void set_task_finished() {
+            std::lock_guard<std::mutex> guard(mutex);
+            active = false;
+        }
+
+
+    };
+
 public:
 	SpecificWorker(TuplePrx tprx, bool startup_check);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
-
-
 	void RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick);
 
 public slots:
@@ -47,6 +77,7 @@ public slots:
 	void initialize(int period);
 private:
 	std::shared_ptr < InnerModel > innerModel;
+	Target<Eigen::Vector2f> target;
 	bool startup_check_flag;
 
 };
