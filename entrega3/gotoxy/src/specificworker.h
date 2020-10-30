@@ -68,7 +68,6 @@ Q_OBJECT
         GO
     };
     state estadoMaq = state::IDLE;
-    int estado=0; //0 IDLE || 1 TURN || 2 GO
 
 public:
 	SpecificWorker(TuplePrx tprx, bool startup_check);
@@ -77,14 +76,16 @@ public:
 	void RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick);
     void idle();
     void turn(RoboCompGenericBase::TBaseState estado);
-    void go(float distancia);
+    void go(RoboCompGenericBase::TBaseState estado);
 
 public slots:
 	void compute();
 	int startup_check();
 	void initialize(int period);
 private:
+    RoboCompGenericBase::TBaseState estado;
 	std::shared_ptr < InnerModel > innerModel;
+	Eigen::Vector2f d;
 	Target<Eigen::Vector2f> target;
 	bool startup_check_flag;
 

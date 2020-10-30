@@ -64,25 +64,25 @@ void SpecificWorker::initialize(int period)
 
 void SpecificWorker::compute()
 {
-    RoboCompGenericBase::TBaseState estado;
+    Eigen::Vector2f d;
     differentialrobot_proxy->getBaseState(estado);
 
-//    if(auto data = target.get() ; data.has_value()){
-//        auto d=data.value();
+//    if(auto data = target.get() ; data.has_value()) {
+//        auto d = data.value();
 //        std::cout << d.x() << std::endl;
 //        std::cout << d.y() << std::endl;
 //
-//        Eigen::Vector2f actual (estado.x, estado.z);
+//        Eigen::Vector2f actual(estado.x, estado.z);
 //        Eigen::Matrix2f matriz;
 //
 //        matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
 //
-//        auto tr=matriz * (d-actual);
-//        auto beta=atan2(tr.x(), tr.y());
-//        auto distancia=tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
-
-//        qDebug() << "Distancia al objetivo" << distancia << endl<<"Angulo beta: "<<beta;
-
+//        auto tr = matriz * (d - actual);
+//        auto beta = atan2(tr.x(), tr.y());
+//        c
+//
+//        qDebug() << "Distancia al objetivo" << distancia << endl << "Angulo beta: " << beta;
+//    }
 
         switch (estadoMaq){
             case IDLE:
@@ -92,87 +92,77 @@ void SpecificWorker::compute()
                 turn(estado);
                 break;
             case GO:
-         //       go();
+                go(estado);
                 break;
         }
-
-
-//    }
-
-
-	//computeCODE
-
-	//try
-	//{
-	//  camera_proxy->getYImage(0,img, cState, bState);
-	//  memcpy(image_gray.data, &img[0], m_width*m_height*sizeof(uchar));
-	//  searchTags(image_gray);
-	//}
-	//catch(const Ice::Exception &e)
-	//{
-	//  std::cout << "Error reading from Camera" << e << std::endl;
-	//}
-	
 	
 }
 void SpecificWorker::idle(){
     qDebug()<<"IDLE"<<endl;
     differentialrobot_proxy->setSpeedBase(0, 0);
-    if (target.active){
-        estadoMaq = TURN;
-        target.active = false;
-    }
+
 }
-void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado){
+void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado) {
     float beta;
-    qDebug()<<"TURN"<<endl;
+//    qDebug()<<"TURN"<<endl;
 //    if(target.active) {
 //        estadoMaq = IDLE;
 //        differentialrobot_proxy->setSpeedBase(0, 0);
 //     return;
 //    }
-    if(auto data = target.get() ; data.has_value()) {
-        auto d = data.value();
+    auto data = target.get();
+    static  Eigen::Vector2f actual(estado.x, estado.z);
+ //   static   Eigen::Vector2f d;
+    Eigen::Matrix2f matriz;
 
-        Eigen::Vector2f actual(estado.x, estado.z);
-        Eigen::Matrix2f matriz;
-
-        matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-
-            auto tr = matriz * (d - actual);
-            beta = atan2(tr.x(), tr.y());
-
+    if (data.has_value()) {
+        d = data.value();
     }
-//    auto data = target.get().value();
-//    auto d=data.value();
-//
-//    Eigen::Vector2f actual(estado.x, estado.z);
-//    Eigen::Matrix2f matriz;
-//    qDebug()<<"TURN 2"<<endl;
-//    matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-//
-//    auto tr = matriz * (d - actual);
-//    beta = atan2(tr.x(), tr.y());
-//    std::cout<<"BETA"<<fabs(beta)<<endl;
+    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+        auto tr = matriz * (d - actual);
+        std::cout<<"tr.x"<<tr.x()<<endl;
+        std::cout<<"tr.y"<<tr.y()<<endl;
+        std::cout<<"actual.x"<<actual.x()<<endl;
+        std::cout<<"actual.y"<<actual.y()<<endl;
 
+        beta = atan2(tr.x(), tr.y());
+    auto distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
+    std::cout<<"distanciaTURN"<<distancia<<endl;
 
+    qDebug()<<fabs(beta)<<endl;
     if (fabs(beta) < 0.05){
-    //    estadoMaq=GO;
+        estadoMaq=GO;
         differentialrobot_proxy->setSpeedBase(0, 0);
         return;
     }else{
-        differentialrobot_proxy->setSpeedBase(0, 1);
+        differentialrobot_proxy->setSpeedBase(0, -1);
     }
-
 
 }
 
-void SpecificWorker::go(float distancia){
+void SpecificWorker::go(RoboCompGenericBase::TBaseState estado){
+ //   auto data = target.get();
+
+ Eigen::Vector2f actual(estado.x, estado.z);
+ //   static   Eigen::Vector2f d;
+    Eigen::Matrix2f matriz;
+
+
+
+ //   d = data.value();
+
+
+    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+    auto tr = matriz * (d - actual);
+    auto distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
+    std::cout<<"distancia"<<distancia<<endl;
+
+
     if (distancia < 100){
         estadoMaq = IDLE;
         return;
     }else{
-        differentialrobot_proxy->setSpeedBase(200, 0);
+        differentialrobot_proxy->setSpeedBase(500, 0);
     }
 }
 
