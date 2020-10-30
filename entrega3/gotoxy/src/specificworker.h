@@ -61,15 +61,23 @@ Q_OBJECT
             std::lock_guard<std::mutex> guard(mutex);
             active = false;
         }
-
-
     };
+    enum state{
+        IDLE,
+        TURN,
+        GO
+    };
+    state estadoMaq = state::IDLE;
+    int estado=0; //0 IDLE || 1 TURN || 2 GO
 
 public:
 	SpecificWorker(TuplePrx tprx, bool startup_check);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
 	void RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick);
+    void idle();
+    void turn(RoboCompGenericBase::TBaseState estado);
+    void go(float distancia);
 
 public slots:
 	void compute();
@@ -79,6 +87,7 @@ private:
 	std::shared_ptr < InnerModel > innerModel;
 	Target<Eigen::Vector2f> target;
 	bool startup_check_flag;
+
 
 };
 

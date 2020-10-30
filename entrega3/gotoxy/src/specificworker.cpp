@@ -45,12 +45,6 @@ bool SpecificWorker::setParams(RoboCompCommonBehavior::ParameterList params)
 //		innerModel = std::make_shared(innermodel_path);
 //	}
 //	catch(const std::exception &e) { qFatal("Error reading config params"); }
-
-
-
-
-
-
 	return true;
 }
 
@@ -66,33 +60,48 @@ void SpecificWorker::initialize(int period)
 	{
 		timer.start(Period);
 	}
-
 }
 
 void SpecificWorker::compute()
 {
-
     RoboCompGenericBase::TBaseState estado;
     differentialrobot_proxy->getBaseState(estado);
 
-    if(auto data = target.get() ; data.has_value()){
-        auto d=data.value();
-        std::cout << d.x() << std::endl;
-        std::cout << d.y() << std::endl;
+//    if(auto data = target.get() ; data.has_value()){
+//        auto d=data.value();
+//        std::cout << d.x() << std::endl;
+//        std::cout << d.y() << std::endl;
+//
+//        Eigen::Vector2f actual (estado.x, estado.z);
+//        Eigen::Matrix2f matriz;
+//
+//        matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+//
+//        auto tr=matriz * (d-actual);
+//        auto beta=atan2(tr.x(), tr.y());
+//        auto distancia=tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
 
-        //Teorema de pitagoras
-        //Lados del triangulo
-        float c1=d.x()-estado.x;
-        float c2=d.y()-estado.z;
-        float hipotenusa= sqrt((c1*c1)+(c2*c2));
-        float angulo1=c1/hipotenusa;
-        float angulo2=c2/hipotenusa;
+//        qDebug() << "Distancia al objetivo" << distancia << endl<<"Angulo beta: "<<beta;
 
-    }
+
+        switch (estadoMaq){
+            case IDLE:
+            idle();
+                break;
+            case TURN:
+                turn(estado);
+                break;
+            case GO:
+         //       go();
+                break;
+        }
+
+
+//    }
 
 
 	//computeCODE
-	//QMutexLocker locker(mutex);
+
 	//try
 	//{
 	//  camera_proxy->getYImage(0,img, cState, bState);
@@ -105,6 +114,66 @@ void SpecificWorker::compute()
 	//}
 	
 	
+}
+void SpecificWorker::idle(){
+    qDebug()<<"IDLE"<<endl;
+    differentialrobot_proxy->setSpeedBase(0, 0);
+    if (target.active){
+        estadoMaq = TURN;
+        target.active = false;
+    }
+}
+void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado){
+    float beta;
+    qDebug()<<"TURN"<<endl;
+//    if(target.active) {
+//        estadoMaq = IDLE;
+//        differentialrobot_proxy->setSpeedBase(0, 0);
+//     return;
+//    }
+    if(auto data = target.get() ; data.has_value()) {
+        auto d = data.value();
+
+        Eigen::Vector2f actual(estado.x, estado.z);
+        Eigen::Matrix2f matriz;
+
+        matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+
+            auto tr = matriz * (d - actual);
+            beta = atan2(tr.x(), tr.y());
+
+    }
+//    auto data = target.get().value();
+//    auto d=data.value();
+//
+//    Eigen::Vector2f actual(estado.x, estado.z);
+//    Eigen::Matrix2f matriz;
+//    qDebug()<<"TURN 2"<<endl;
+//    matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+//
+//    auto tr = matriz * (d - actual);
+//    beta = atan2(tr.x(), tr.y());
+//    std::cout<<"BETA"<<fabs(beta)<<endl;
+
+
+    if (fabs(beta) < 0.05){
+    //    estadoMaq=GO;
+        differentialrobot_proxy->setSpeedBase(0, 0);
+        return;
+    }else{
+        differentialrobot_proxy->setSpeedBase(0, 1);
+    }
+
+
+}
+
+void SpecificWorker::go(float distancia){
+    if (distancia < 100){
+        estadoMaq = IDLE;
+        return;
+    }else{
+        differentialrobot_proxy->setSpeedBase(200, 0);
+    }
 }
 
 int SpecificWorker::startup_check()
@@ -119,7 +188,8 @@ int SpecificWorker::startup_check()
 void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick) {
    // std::cout << __FUNCTION__ << myPick.x << std::endl <<myPick.z << std::endl;
 
-    target.put(Eigen::Vector2f(myPick.x, myPick.z));
+    target.put(Eigen::Vector2f(myPick.x, myPick.z));//coord del pick al struct target, copia segura
+    estadoMaq = TURN;
 
 }
 
