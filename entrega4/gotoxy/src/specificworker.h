@@ -65,11 +65,13 @@ Q_OBJECT
     enum state{
         IDLE,
         TURN,
-        GO
+        GO,
+        AROUND
     };
     state estadoMaq = state::IDLE;
 
 public:
+    int A,B,C;
 	SpecificWorker(TuplePrx tprx, bool startup_check);
 	~SpecificWorker();
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
@@ -77,6 +79,7 @@ public:
     void idle();
     void turn(RoboCompGenericBase::TBaseState estado);
     void go(RoboCompGenericBase::TBaseState estado);
+    void around(RoboCompGenericBase::TBaseState estado);
 
 public slots:
 	void compute();
