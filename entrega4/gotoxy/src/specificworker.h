@@ -77,9 +77,10 @@ public:
 	bool setParams(RoboCompCommonBehavior::ParameterList params);
 	void RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick);
     void idle();
-    void turn(RoboCompGenericBase::TBaseState estado);
-    void go(RoboCompGenericBase::TBaseState estado);
+    void turn(RoboCompGenericBase::TBaseState estado,float beta);
+    void go(RoboCompGenericBase::TBaseState estado,float distancia);
     void around(RoboCompGenericBase::TBaseState estado);
+    void calcular(float &beta, float &distancia);
 
 public slots:
 	void compute();
@@ -87,7 +88,7 @@ public slots:
 	void initialize(int period);
 private:
     RoboCompGenericBase::TBaseState estado;
-	std::shared_ptr < InnerModel > innerModel;
+//	std::shared_ptr < InnerModel > innerModel;
 	Eigen::Vector2f d;
 	Target<Eigen::Vector2f> target;
 	bool startup_check_flag;

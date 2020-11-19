@@ -55,68 +55,46 @@ void SpecificWorker::initialize(int period) {
     }
 }
 
-void SpecificWorker::compute() {
-    Eigen::Vector2f d;
+void SpecificWorker::calcular(float &beta, float &distancia){
+    auto data = target.get();
     differentialrobot_proxy->getBaseState(estado);
-    std::cout << "estadoMaq" << estadoMaq << endl;
+    if (data.has_value()) {
+        d = data.value();
+    }
+    Eigen::Vector2f actual(estado.x, estado.z);
+    Eigen::Matrix2f matriz;
+    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
+    auto tr = matriz * (d - actual);
+    distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
+    beta = atan2(tr.x(), tr.y());
+}
 
-//    if(auto data = target.get() ; data.has_value()) {
-//        auto d = data.value();
-//        std::cout << d.x() << std::endl;
-//        std::cout << d.y() << std::endl;
-//
-//        Eigen::Vector2f actual(estado.x, estado.z);
-//        Eigen::Matrix2f matriz;
-//
-//        matriz << cos(estado.alpha), sin(estado.alpha), -sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-//
-//        auto tr = matriz * (d - actual);
-//        auto beta = atan2(tr.x(), tr.y());
-//        c
-//
-//        qDebug() << "Distancia al objetivo" << distancia << endl << "Angulo beta: " << beta;
-//    }
+void SpecificWorker::compute() {
+    float beta, distancia;
+    calcular(beta, distancia);
 
     switch (estadoMaq) {
         case IDLE:
             idle();
             break;
         case TURN:
-            turn(estado);
+            turn(estado,beta);
             break;
         case GO:
-            go(estado);
+            go(estado,distancia);
             break;
         case AROUND:
             around(estado);
             break;
     }
-
 }
 
 void SpecificWorker::idle() {
-  //  qDebug() << "IDLE" << endl;
     differentialrobot_proxy->setSpeedBase(0, 0);
 }
 
-void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado) {
-    auto data = target.get();
-    Eigen::Vector2f actual(estado.x, estado.z);
-    Eigen::Matrix2f matriz;
-
-    if (data.has_value()) {
-        d = data.value();
-    }
-    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-    auto tr = matriz * (d - actual);
-    std::cout << "tr.x" << tr.x() << endl;
-    std::cout << "tr.y" << tr.y() << endl;
-    std::cout << "actual.x" << actual.x() << endl;
-    std::cout << "actual.y" << actual.y() << endl;
-    auto beta = atan2(tr.x(), tr.y());
-    auto distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
-
-    qDebug() << fabs(beta) << endl;
+void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado, float beta) {
+    qDebug() << "Ángulo: "<< fabs(beta) << endl;
     if (fabs(beta) < 0.05) {
         estadoMaq = GO;
         differentialrobot_proxy->setSpeedBase(0, 0);
@@ -124,25 +102,39 @@ void SpecificWorker::turn(RoboCompGenericBase::TBaseState estado) {
     } else {
         differentialrobot_proxy->setSpeedBase(0, beta);
     }
-
 }
 
-void SpecificWorker::around(RoboCompGenericBase::TBaseState estado) {
-    Eigen::Vector2f actual(estado.x, estado.z);
-    Eigen::Matrix2f matriz;
-    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-    auto tr = matriz * (d - actual);
-    auto distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
+void SpecificWorker::go(RoboCompGenericBase::TBaseState estado,float distancia) {
 
     RoboCompLaser::TLaserData datos = laser_proxy->getLaserData();
     std::sort( datos.begin(), datos.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; });
+    std::cout << "laser" <<datos.front().dist<<endl;
 
-    int aux=0;
-    aux=fabs((A*estado.x)+(B*estado.z)+C);
-    std::cout << "recta" <<A << "|" << B <<"|"<< C <<"|"<<aux <<endl;
+    if (distancia < 230) {
+        estadoMaq = IDLE;
+        target.set_task_finished();
+        return;
+    }
+
+    if(datos.front().dist < 200) {
+        estadoMaq = AROUND;
+        std::cout << "Obstaculo encontrado" <<datos.front().dist<<endl;
+        return;
+    }else {
+        differentialrobot_proxy->setSpeedBase(datos.front().dist, 0);
+    }
+}
+
+void SpecificWorker::around(RoboCompGenericBase::TBaseState estado) {
+
+    RoboCompLaser::TLaserData datos = laser_proxy->getLaserData();
+    std::sort( datos.begin(), datos.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; });
+    int aux=fabs((A*estado.x)+(B*estado.z)+C);
+    std::cout<<aux <<endl;
+
     differentialrobot_proxy->setSpeedBase(0, 1);
 
-    if(aux<15000){
+    if(aux<16000){
         differentialrobot_proxy->setSpeedBase(0, 0);
         estadoMaq = TURN;
     }
@@ -150,39 +142,8 @@ void SpecificWorker::around(RoboCompGenericBase::TBaseState estado) {
     if(datos.front().dist < 300) {
         differentialrobot_proxy->setSpeedBase(0, -1);
     }else{
-       differentialrobot_proxy->setSpeedBase(100, 0.3);
+       differentialrobot_proxy->setSpeedBase(150, 0.4);
        return;
-    }
-}
-
-void SpecificWorker::go(RoboCompGenericBase::TBaseState estado) {
-    Eigen::Vector2f actual(estado.x, estado.z);
-    Eigen::Matrix2f matriz;
-    matriz << cos(estado.alpha), -sin(estado.alpha), sin(estado.alpha), cos(estado.alpha);//matriz traspuesta
-    auto tr = matriz * (d - actual);
-    auto distancia = tr.norm();//norm nos da la dist entre el robot y el target(transformacion matriz)
-    std::cout << "distancia" << distancia << endl;
-
-    RoboCompLaser::TLaserData datos = laser_proxy->getLaserData();
-    std::sort( datos.begin(), datos.end(), [](RoboCompLaser::TData a, RoboCompLaser::TData b){ return     a.dist < b.dist; });
-    std::cout << "laser" <<datos.front().dist<<endl;
-
-    int velocidad=distancia;
-    //if (datos.front().dist < distancia)
-      //  velocidad=datos.front().dist;
-
-    if(datos.front().dist < 300) {
-        estadoMaq = AROUND;
-        std::cout << "Obstaculo encontrado" <<datos.front().dist<<endl;
-        return;
-    }else {
-        differentialrobot_proxy->setSpeedBase(500, 0);
-    }
-
-    if (distancia < 100) {
-        estadoMaq = IDLE;
-        target.set_task_finished();
-        return;
     }
 }
 
@@ -192,16 +153,12 @@ int SpecificWorker::startup_check() {
     return 0;
 }
 
-
 //SUBSCRIPTION to setPick method from RCISMousePicker interface
 void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPick) {
     // std::cout << __FUNCTION__ << myPick.x << std::endl <<myPick.z << std::endl;
 
     target.put(Eigen::Vector2f(myPick.x, myPick.z));//coord del pick al struct target, copia segura     //X1, Y1
-
-
     differentialrobot_proxy->getBaseState(estado);                                                         //X2, Y2
-
     A=myPick.z-estado.z;
     B=estado.x-myPick.x;
     C=(myPick.x-estado.x)*myPick.z + (estado.z-myPick.z)*myPick.x;
