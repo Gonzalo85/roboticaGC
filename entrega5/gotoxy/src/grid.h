@@ -11,18 +11,21 @@ template<typename HMIN, HMIN hmin, typename WIDTH, WIDTH width, typename TILE, T
 class Grid
 {
     public:
+
+//    this.width = width;
+//    this.tile = tile;
         Grid()
         {
             array.resize((int)(width/tile));
             for (auto &row : array)
-                row.resize((int)(width/tile));
+                row.resize((int)(width/tile));//creada matriz de 50x50
             int k=0;
             for (int i = hmin; i < width/2; i += tile, k++)
             {
                 int l=0;
-                for (int j = hmin; j < width/2; j += tile, l++)
+                for (int j = hmin; j < width/2; j += tile, l++)//recorriendo coordenadas de la celda, indexada por tile(100 en 100)
                 {
-                    array[k][l] = Value{false, nullptr, i, j};
+                    array[k][l] = Value{false, nullptr, i, j};//coordenadas del centro
                 }
             }
         };
@@ -30,8 +33,8 @@ class Grid
         struct Value
         {
             bool occupied = false;
-            QGraphicsItem * paint_cell = nullptr;
-            int cx, cy;
+            QGraphicsRectItem * paint_cell = nullptr;
+            int cx, cy;//coordenadas del centro en el mundo
             int dist = 0; //dist vecinos
         };
 
@@ -42,15 +45,15 @@ class Grid
             for (auto &row : array)
                 for (auto &elem : row)
                 {
-                    elem.paint_cell = scene.addRect(-tile / 2, -tile / 2, tile, tile, QPen(QColor("Green")),
-                                                    QBrush(QColor("Green")));
-                    elem.paint_cell->setPos(elem.cx, elem.cy);
+                    elem.paint_cell = scene.addRect(-tile / 2, -tile / 2, tile, tile, QPen(QColor("DarkGreen")),
+                                                    QBrush(QColor("LightGreen")));
+                    elem.paint_cell->setPos(elem.cx, elem.cy);//mover el elemento a sus coordenadas, al centro de la baldosa
                 }
         }
     /*
- * Inicializamos el array a false, osea, no ocupades.
+ * Inicializamos el array a false, osea, no ocupadas.
  */
-    void inicializate()
+    void inicializate()//poner a ocupadas la superficie que caiga debajo de las cajas que sean obstaculos
     {
         for (int i = 0; i < this->tam; ++i) {
             for (int j = 0; j < this->tam; ++j) {
@@ -68,11 +71,13 @@ public:
      */
     void set_Value(int x, int z, bool v)
     {
-       // this->array[x][z] = v;
-       //auto [i, j] = transformar(x,z);
-       //array[i][j].occupied = v;
-       //if(v)
-       //     array[i][j].paint_cell->setColor(QColor());
+        this->array[x][z].occupied = v;
+       auto [i, j] = transformar(x,z);//metodo que pases x,z y devuelva i,j, acceder a valores del mundo
+       array[i][j].occupied = v;
+       if(v)
+            array[i][j].paint_cell->setBrush(QColor("Red"));
+       else
+           array[i][j].paint_cell->setBrush(QColor("Green"));
 
     }
     /**
@@ -83,9 +88,15 @@ public:
      */
     bool get_value(int x, int z)
     {
-        //auto [i, j] = transformar(x,z);
-        //return  this->array[x][z];
-        return true;
+        auto [i, j] = transformar(x,z);
+        return  this->array[x][z];
+    }
+
+    std::tuple<int,int> transformar(int i, int j){
+        int k = ((width/tile)/5000 * i) + (width/tile)/2;
+        int l = ((width/tile)/5000 * j) + (width/tile)/2;
+
+        return std::make_tuple(k,l);
     }
 
 };

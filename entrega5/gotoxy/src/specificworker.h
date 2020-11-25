@@ -111,7 +111,7 @@ private:
     std::vector<QGraphicsEllipseItem*> arcs_vector;
 
     //grid
-    Grid<int, -2500, int, 5000, int, 100> grid;
+    Grid<int, -2500, int, 5000, int, 100> grid;//construye la clase a medida
 };
 
 #endif
