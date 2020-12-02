@@ -101,9 +101,13 @@ void SpecificWorker::initialize(int period) {
     grid.set_Value(bState.x, bState.z, true);
 
     //cajas
-    auto caja1 = innerModel->getTransform("caja1");
-    if (caja1)
-        grid.set_Value(caja1->backtX, caja1->backtZ, true);
+//    auto caja1 = innerModel->getTransform("caja1");
+//    if (caja1)
+//        grid.set_Value(caja1->backtX, caja1->backtZ, true);
+
+    fill_grid_with_obstacles();
+
+
 
     // recorrer las pared y poner las celdas a rojo
 
@@ -159,13 +163,13 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
         float wOrigen = bState.rotV; // Rotation W
 
         //calculamos las posiciones futuras del robot y se insertan en un vector.
-        std::vector <tupla> vectorPuntos = calcularPuntos(vOrigen, wOrigen);
+        std::vector<tupla> vectorPuntos = calcularPuntos(vOrigen, wOrigen);
 
         //quitamos los puntos futuros que nos llevan a obstaculos
-        std::vector <tupla> vectorSInObs = obstaculos(vectorPuntos, bState.alpha, ldata);
+        std::vector<tupla> vectorSInObs = obstaculos(vectorPuntos, bState.alpha, ldata);
 
         //ordenamos el vector de puntos segun la distancia
-        std::vector <tupla> vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());
+        std::vector<tupla> vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());
 
         if (vectorOrdenado.size() > 0) {
             auto[x, y, v, w, alpha] = vectorOrdenado.front();
@@ -182,6 +186,46 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
             return;
         }
     }
+}
+
+//obstaculos y paredes
+void SpecificWorker::fill_grid_with_obstacles() {
+    for (int i = 1; i < 10; i++)  //max number of boxes
+    {
+        auto caja = "caja" + QString::number(i);
+        auto node = innerModel->getNode(caja);
+        auto mesh = innerModel->getNode("cajaMesh" + QString::number(i));
+        if (node and mesh) {
+            auto pose = innerModel->transform("world", caja);
+            auto plane = dynamic_cast<InnerModelPlane *>(mesh);
+            int x = pose.x();
+            int z = pose.z();
+            int width = plane->depth;
+            int depth = plane->width;
+            std::cout << "x: " << x << endl;
+            std::cout << "z: " << z << endl;
+
+            /****
+            AQUI EL CODIGO DE MODIFICACIÓN DEL GRID
+            *****/
+            //cajas
+            for (int i = -width / 2; i < width / 2; i++) {
+                for (int j = -depth / 2; j < depth / 2; j++)
+                    grid.set_Value(x + i, z + j, true);
+            }
+
+            //paredes
+            for (int i = -2500; i < 2500; i++) {
+                grid.set_Value(i, -2500, true);
+                grid.set_Value(i, 2499, true);
+                grid.set_Value(2499,i, true);
+                grid.set_Value(-2500,i, true);
+
+            }
+
+        }
+    }
+
 }
 
 /**
@@ -212,7 +256,7 @@ Eigen::Vector2f SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseS
 
 void
 SpecificWorker::draw_things(const RoboCompGenericBase::TBaseState &bState, const RoboCompLaser::TLaserData &ldata,
-                            const std::vector <tupla> &puntos, const tupla &front) {
+                            const std::vector<tupla> &puntos, const tupla &front) {
     //draw robot
     //innerModel->updateTransformValues("base", bState.x, 0, bState.z, 0, bState.alpha, 0);
     robot_polygon->setRotation(qRadiansToDegrees(-bState.alpha));
@@ -252,8 +296,8 @@ SpecificWorker::draw_things(const RoboCompGenericBase::TBaseState &bState, const
  * @param wOrigen
  * @return vector de tuplas <x,y,av,giro,angulo>
  */
-std::vector <SpecificWorker::tupla> SpecificWorker::calcularPuntos(float vOrigen, float wOrigen) {
-    std::vector <tupla> vectorT;
+std::vector<SpecificWorker::tupla> SpecificWorker::calcularPuntos(float vOrigen, float wOrigen) {
+    std::vector<tupla> vectorT;
     //Calculamos las posiciones futuras del robot y se insertan en un vector.
     for (float dt = 0.3; dt < 1; dt += 0.1) { //velocidad robot
         for (float v = 0; v <= 1000; v += 100) //advance
@@ -291,11 +335,11 @@ std::vector <SpecificWorker::tupla> SpecificWorker::calcularPuntos(float vOrigen
  * @param ldata
  * @return
  */
-std::vector <SpecificWorker::tupla>
-SpecificWorker::obstaculos(std::vector <tupla> vector, float aph, const RoboCompLaser::TLaserData &ldata) {
+std::vector<SpecificWorker::tupla>
+SpecificWorker::obstaculos(std::vector<tupla> vector, float aph, const RoboCompLaser::TLaserData &ldata) {
     QPolygonF polygonF_Laser;
     const float semiancho = 210; // el semiancho del robot
-    std::vector <tupla> vectorOBs;
+    std::vector<tupla> vectorOBs;
 
     //poligono creado con los puntos del laser
     for (auto &l: ldata)
@@ -336,7 +380,7 @@ SpecificWorker::obstaculos(std::vector <tupla> vector, float aph, const RoboComp
  * @param z
  * @return vector ordenado
  */
-std::vector <SpecificWorker::tupla> SpecificWorker::ordenar(std::vector <tupla> vector, float x, float z) {
+std::vector<SpecificWorker::tupla> SpecificWorker::ordenar(std::vector<tupla> vector, float x, float z) {
     std::sort(vector.begin(), vector.end(), [x, z](const auto &a, const auto &b) {
         const auto &[ax, ay, ca, cw, aa] = a;
         const auto &[bx, by, ba, bw, bb] = b;

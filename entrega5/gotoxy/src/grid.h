@@ -71,15 +71,21 @@ public:
      */
     void set_Value(int x, int z, bool v)
     {
-        this->array[x][z].occupied = v;
-       auto [i, j] = transformar(x,z);//metodo que pases x,z y devuelva i,j, acceder a valores del mundo
-       array[i][j].occupied = v;
-       if(v)
-            array[i][j].paint_cell->setBrush(QColor("Red"));
-       else
-           array[i][j].paint_cell->setBrush(QColor("Green"));
 
+       if( auto r = transformar(x,z); r.has_value())               //metodo que pases x,z y devuelva i,j, acceder a valores del mundo
+       {
+           auto[i, j] = r.value();
+           array[i][j].occupied = v;
+           if (v)
+               array[i][j].paint_cell->setBrush(QColor("Red"));
+           else
+               array[i][j].paint_cell->setBrush(QColor("Green"));
+       }
     }
+//    void set_ocuppied_w(int x, int y){
+//        auto [i,j] = transformar(x,y);
+//
+//    }
     /**
      * devolvemos el valor de la coordenada x,z
      * @param x
@@ -92,11 +98,16 @@ public:
         return  this->array[x][z];
     }
 
-    std::tuple<int,int> transformar(int i, int j){
-        int k = ((width/tile)/5000 * i) + (width/tile)/2;
-        int l = ((width/tile)/5000 * j) + (width/tile)/2;
+    std::optional<std::tuple<int,int>> transformar(int i, int j){
+
+        int k = i/tile + (width/tile)/2;
+        int l = j/tile + (width/tile)/2;
 
         return std::make_tuple(k,l);
+    }
+
+    void pintarparedes(){
+
     }
 
 };
