@@ -95,16 +95,12 @@ void SpecificWorker::initialize(int period) {
     graphicsView->fitInView(scene.sceneRect(), Qt::KeepAspectRatio);
 
     // grid
-    grid.create_graphic_items(scene);//crea todos los elementos graficos
+    grid.create_graphic_items(scene,graphicsView);//crea todos los elementos graficos
     // recorrer las cajas y poner a ocupado todos las celdas que caigan
     //poiscion del robot a rojo, ocupada
-    grid.set_Value(bState.x, bState.z, true);
+  //  grid.set_Value(bState.x, bState.z, true);
 
-    //cajas
-//    auto caja1 = innerModel->getTransform("caja1");
-//    if (caja1)
-//        grid.set_Value(caja1->backtX, caja1->backtZ, true);
-
+    //Pintar cajas y obstaculos
     fill_grid_with_obstacles();
 
 
@@ -131,8 +127,10 @@ void SpecificWorker::compute() {
     catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
 
     if (auto data = target_buffer.get(); data.has_value()) {
-        target = data.value();
+        auto[x, y, z] = data.value();
+
         // calcular la función de navegación
+        grid.navigation(x, z);
         //desde el target, avanzar con un fuego
     }
     if (target_buffer.is_active()) {
@@ -146,7 +144,8 @@ void SpecificWorker::compute() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata) {
+void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata)
+{
     //coordenadas del target del mundo real al mundo del  robot
     Eigen::Vector2f tr = transformar_targetRW(bState);
 
@@ -439,31 +438,3 @@ void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPic
 /**************************************/
 // From the RoboCompRCISMousePicker you can use this types:
 // RoboCompRCISMousePicker::Pick
-
-//  //posicion del robot ocupada
-//        grid.set_Value(bState.x, bState.z, true);
-//        //posiciones de las cajas ocupadas
-//        auto caja1 = innerModel->getTransform("caja1");
-//        if (caja1)
-//            grid.set_Value(caja1->backtX, caja1->backtZ, true);
-//            grid.set_Value(caja1->backtX, caja1->backtZ, true);
-//
-//        auto caja2 = innerModel->getTransform("caja2");
-//        if (caja2)
-//            grid.set_Value(caja2->backtX, caja2->backtZ, true);
-//
-//        auto caja3 = innerModel->getTransform("caja3");
-//        if (caja3)
-//            grid.set_Value(caja3->backtX, caja3->backtZ, true);
-//
-//        auto caja4 = innerModel->getTransform("caja4");
-//        if (caja4)
-//            grid.set_Value(caja4->backtX, caja4->backtZ, true);
-//
-//        auto caja5 = innerModel->getTransform("caja5");
-//        if (caja5)
-//            grid.set_Value(caja5->backtX, caja5->backtZ, true);
-//
-//        auto caja6 = innerModel->getTransform("caja6");
-//        if (caja6)
-//            grid.set_Value(caja6->backtX, caja6->backtZ, true);

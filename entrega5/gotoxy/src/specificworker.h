@@ -113,6 +113,13 @@ private:
 
     //grid
     Grid<int, -2500, int, 5000, int, 100> grid;//construye la clase a medida
+
+protected:
+    void resizeEvent(QResizeEvent * event)
+    {
+        graphicsView->fitInView(scene.sceneRect(), Qt::KeepAspectRatio);
+    }
+
 };
 
 #endif
