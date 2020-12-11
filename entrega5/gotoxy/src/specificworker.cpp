@@ -130,15 +130,21 @@ void SpecificWorker::compute() {
         auto[x, y, z] = data.value();
 
         // calcular la función de navegación
-        grid.navigation(x, z);
+        if (auto r = grid.get_value(x,z)) {
+            auto celda = r.value();
+            //buscar el vecino más bajo en el grid
+            grid.navigation(celda);
+        }
         //desde el target, avanzar con un fuego
     }
     if (target_buffer.is_active()) {
-        //preuntar si ha llegado
-        //buscar el vecino más bajo en el grid
+
         //llamar a DWA con ese punto
+
+        dynamicWindowApproach(bState, ldata);
+
     }
-    dynamicWindowApproach(bState, ldata);
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,9 +154,9 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
 {
     //coordenadas del target del mundo real al mundo del  robot
     Eigen::Vector2f tr = transformar_targetRW(bState);
-
     //distancia que debe recorrer hasta el target
     auto dist = tr.norm();
+    //preuntar si ha llegado
     if (dist < 50) {
         differentialrobot_proxy->setSpeedBase(0, 0);
         target_buffer.set_task_finished();
@@ -169,7 +175,7 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
 
         //ordenamos el vector de puntos segun la distancia
         std::vector<tupla> vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());
-
+        //movimiento
         if (vectorOrdenado.size() > 0) {
             auto[x, y, v, w, alpha] = vectorOrdenado.front();
             std::cout << __FUNCTION__ << " " << x << " " << y << " " << v << " " << w << " " << alpha
@@ -201,8 +207,6 @@ void SpecificWorker::fill_grid_with_obstacles() {
             int z = pose.z();
             int width = plane->depth;
             int depth = plane->width;
-            std::cout << "x: " << x << endl;
-            std::cout << "z: " << z << endl;
 
             /****
             AQUI EL CODIGO DE MODIFICACIÓN DEL GRID
@@ -234,8 +238,7 @@ void SpecificWorker::fill_grid_with_obstacles() {
 */
 Eigen::Vector2f SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseState bState) {
     // Coordenadas del target en el mundo real
-    auto[x, y, z] = target;
-
+    auto[x, y, z] = target_buffer.get().value();//obtener del buffer
     //Target mundo real
     Eigen::Vector2f tw(x, z);
 
@@ -404,9 +407,6 @@ void SpecificWorker::RCISMousePicker_setPick(RoboCompRCISMousePicker::Pick myPic
 
     target_buffer.put(std::make_tuple(myPick.x, myPick.y, myPick.z)); //metemos las coordenadas con el mutex iniciado
     //Coordenadas del target
-    std::cout << "x: " << myPick.x;
-    std::cout << "..y: " << myPick.y;
-    std::cout << "..z: " << myPick.z << std::endl;
 }
 
 /**************************************/

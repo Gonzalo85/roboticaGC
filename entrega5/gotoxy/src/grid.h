@@ -10,9 +10,15 @@
 template<typename HMIN, HMIN hmin, typename WIDTH, WIDTH width, typename TILE, TILE tile>
 class Grid {
 public:
+    std::vector<std::tuple<int, int>> lista_coor_de_vecinos{{-1, -1},
+                                                            {0,  -1},
+                                                            {1,  -1},
+                                                            {-1, 0},
+                                                            {1,  0},
+                                                            {-1, 1},
+                                                            {0,  1},
+                                                            {-1, 1}};
 
-//    this.width = width;
-//    this.tile = tile;
     Grid() {
         array.resize((int) (width / tile));
         for (auto &row : array)
@@ -23,7 +29,7 @@ public:
             for (int j = hmin;
                  j < width / 2; j += tile, l++)//recorriendo coordenadas de la celda, indexada por tile(100 en 100)
             {
-                array[k][l] = Value{false, nullptr, nullptr, i, j};//coordenadas del centro
+                array[k][l] = Value{false, nullptr, nullptr, i, j,k,l,-1};//coordenadas del centro
             }
         }
     };
@@ -33,9 +39,11 @@ public:
         QGraphicsRectItem *paint_cell = nullptr;
         QGraphicsTextItem *text_cell = nullptr;
         int cx, cy;//coordenadas del centro en el mundo
+        int k, l;
         int dist = 0; //dist vecinos
     };
-    std::vector <std::vector<Value>> array;
+
+    std::vector<std::vector<Value>> array;
 
     void create_graphic_items(QGraphicsScene &scene, QGraphicsView *view) {
         auto fondo = QColor("LightGreen");
@@ -113,26 +121,34 @@ public:
      * @param z
      * @return
      */
-    bool get_value(int x, int z) {
-        auto[i, j] = transformar(x, z);
-        return this->array[x][z];
+    std::optional<Value> get_value(int x, int z) {
+         if(auto v = transformar(x,z); v.has_value()){
+             auto [x,y] = v.value();
+             return array[x][y];
+         }
+         else{
+             return{};
+         }
     }
+
     bool get_occupied(int x, int z) {
         return (this->array[x][z].occupied);
     }
-    void set_dist(int x, int y, int dist2){
-        auto[x2, y2] = this->transformar(x,y);
-        this->array[x2,y2].dist = dist2;
+
+    void set_dist(int x, int y, int dist2) {
+        auto[x2, y2] = this->transformar(x, y);
+        this->array[x2, y2].dist = dist2;
     }
 
-    std::optional <std::tuple<int, int>> transformar(int i, int j) {
+    std::optional<std::tuple<int, int>> transformar(int i, int j) {
 
         int k = i / tile + (width / tile) / 2;
         int l = j / tile + (width / tile) / 2;
 
         return std::make_tuple(k, l);
     }
-    int transformar_mapa(int i){
+
+    int transformar_mapa(int i) {
         return i / tile + (width / tile) / 2;
     }
 
@@ -143,66 +159,39 @@ public:
     }
 
 
-    std::vector <Value> vecinos(Value v, int dist) {
-//        int ocupadas=0;
-//        for(int i=v.cx-1; i=v.cx+1; i++){
-//            for(int j=v.cy-1; j=v.cy+1; j++){
-//                if(i>=-2500 && i<2500 && j>=-2500 && j<2500){}
-//                    Value v=this->array[i][j];
-//                if(!v.occupied){
-//                    listaCasillas[ocupadas]=v;
-//                }
-//            }
-//        }
-        std::vector <std::tuple<int, int>> lista_coor_de_vecinos{{-1, -1},
-                                                                 {0,  -1},
-                                                                 {1,  -1},
-                                                                 {-1, 0},
-                                                                 {1,  0},
-                                                                 {-1, 1},
-                                                                 {0,  1},
-                                                                 {-1, 1}};
-
-        std::vector <Value> lista;
+    std::vector<Value> vecinos(Value &v, int dist) {
+        std::vector<Value> lista;
         for (auto[dk, dl] : lista_coor_de_vecinos) {
-            int k = v.cx + dk;        // OJO hay que añadir al struct Value las coordenadas de array
-            int l = v.cy + dl;
-            if (k >= -2500 && k < 2500 && l >= -2500 && l < 2500) {   //Limites
-                if (!get_occupied(k,l) and this->array[k][l].dist != -1) {
-                    set_dist(k, l, dist);
-                    lista.append(this->array[k][l]);
+            int k = v.k + dk;        // OJO hay que añadir al struct Value las coordenadas de array
+            int l = v.l + dl;
+ //           if (k >= -2500 && k < 2500 && l >= -2500 && l < 2500) {   //Limites
+                if (k>0 and l>0 and l<array.size()and k<array.size() and !array[k][l].occupied and array[k][l].dist==-1) {
+                    this->array[k][l].dist = dist;
+                    this->array[k][l].text_cell->setPlainText(QString::number(dist));
+                    lista.push_back(this->array[k][l]);
                 }
-            }
+            //}
         }
+
         return lista;
     }
 
-    void navigation(int xTarget, int yTarget) {
+    void navigation(Value &v) {
         reset();
-        int x = transformar_mapa(xTarget);
-        int y = transformar_mapa(yTarget);
         int dist = 0;
-        Value v = this->array[x][y];
-        if (!v.occupied) {
-            v.text_cell->setPlainText(QString::number(dist));
-            v.text_cell->setPos(v.cx, v.cy);
-            v.dist = dist;
-        }
+        auto listaCasillas1 = vecinos(v, dist);
+        std::vector<Value> listaCasillas2={};
 
-        std::vector <Value> listaCasillas1 = vecinos(v, dist);
-        std::vector <Value> listaCasillas2;
         bool fin = false;
-
         while (!fin) {
-            for (auto current_cell : listaCasillas1) {
+            for (auto &current_cell : listaCasillas1) {
                 auto selected = vecinos(current_cell, dist);
-                listaCasillas2.append(selected);
+                listaCasillas2.insert(listaCasillas2.end(), selected.begin(), selected.end());
             }
             dist++;
             fin = listaCasillas2.empty();
             listaCasillas1.swap(listaCasillas2);
             listaCasillas2.clear();
-
         }
     }
 };
