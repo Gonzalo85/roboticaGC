@@ -55,6 +55,7 @@ class SpecificWorker : public GenericWorker {
         std::optional<T> get() {
             std::lock_guard<std::mutex> guard(mutex);
             if (not empty){
+                empty = true;
                 return data;
             } else
                 return {};
@@ -97,7 +98,7 @@ private:
 
     //e4
     std::vector<tupla> calcularPuntos(float vOrigen,  float wOrigen);
-    std::vector<tupla> ordenar(std::vector<tupla> vector, float x, float z);
+    tupla ordenar(std::vector<tupla> vector, float x, float z);
     std::vector<tupla> obstaculos(std::vector<tupla> vector, float aph,const RoboCompLaser::TLaserData &ldata);
     void dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata);
     void fill_grid_with_obstacles();

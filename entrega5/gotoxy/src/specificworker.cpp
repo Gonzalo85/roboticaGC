@@ -95,10 +95,10 @@ void SpecificWorker::initialize(int period) {
     graphicsView->fitInView(scene.sceneRect(), Qt::KeepAspectRatio);
 
     // grid
-    grid.create_graphic_items(scene,graphicsView);//crea todos los elementos graficos
+    grid.create_graphic_items(scene, graphicsView);//crea todos los elementos graficos
     // recorrer las cajas y poner a ocupado todos las celdas que caigan
     //poiscion del robot a rojo, ocupada
-  //  grid.set_Value(bState.x, bState.z, true);
+    //  grid.set_Value(bState.x, bState.z, true);
 
     //Pintar cajas y obstaculos
     fill_grid_with_obstacles();
@@ -124,25 +124,28 @@ void SpecificWorker::compute() {
 
     RoboCompLaser::TLaserData ldata;
     try { ldata = laser_proxy->getLaserData(); }
+
     catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
-
-    if (auto data = target_buffer.get(); data.has_value()) {
+    std::cout << " hola" << std::endl;
+    Eigen::Vector2f target;
+    if (auto data = target_buffer.get(); data.has_value())
+    {
+        std::cout << " At target" << std::endl;
         auto[x, y, z] = data.value();
-
+        target[0] = x; target[1] = z;
         // calcular la función de navegación
-        if (auto r = grid.get_value(x,z)) {
+        if (auto r = grid.get_value(x, z); r.has_value())
+        {
             auto celda = r.value();
             //buscar el vecino más bajo en el grid
             grid.navigation(celda);
         }
         //desde el target, avanzar con un fuego
     }
-    if (target_buffer.is_active()) {
-
+    if (target_buffer.is_active())
+    {
         //llamar a DWA con ese punto
-
-        dynamicWindowApproach(bState, ldata);
-
+        dynamicWindowApproach(bState, ldata, target);
     }
 
 }
@@ -150,10 +153,10 @@ void SpecificWorker::compute() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata)
+void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata, const Eigen::Vector2f &target)
 {
     //coordenadas del target del mundo real al mundo del  robot
-    Eigen::Vector2f tr = transformar_targetRW(bState);
+    Eigen::Vector2f tr = transformar_targetRW(bState, target);
     //distancia que debe recorrer hasta el target
     auto dist = tr.norm();
     //preuntar si ha llegado
@@ -174,22 +177,18 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
         std::vector<tupla> vectorSInObs = obstaculos(vectorPuntos, bState.alpha, ldata);
 
         //ordenamos el vector de puntos segun la distancia
-        std::vector<tupla> vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());
+        tupla vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());//vector ya ordenado
         //movimiento
-        if (vectorOrdenado.size() > 0) {
-            auto[x, y, v, w, alpha] = vectorOrdenado.front();
+
+            auto[x, y, v, w, alpha] = vectorOrdenado;
             std::cout << __FUNCTION__ << " " << x << " " << y << " " << v << " " << w << " " << alpha
                       << std::endl;
-            if (w > M_PI) w = M_PI;
-            if (w < -M_PI) w = -M_PI;
-            if (v < 0) v = 0;
-            try { differentialrobot_proxy->setSpeedBase(std::min(v / 5, 1000.f), w); }
+            try {
+                differentialrobot_proxy->setSpeedBase(std::min(v / 5, 1000.f), w);
+            }
             catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
-            draw_things(bState, ldata, vectorOrdenado, vectorOrdenado.front());
-        } else {
-            std::cout << "Vector vacio" << std::endl;
+            draw_things(bState, ldata, vectorSInObs, vectorOrdenado);
             return;
-        }
     }
 }
 
@@ -221,8 +220,8 @@ void SpecificWorker::fill_grid_with_obstacles() {
             for (int i = -2500; i < 2500; i++) {
                 grid.set_Value(i, -2500, true);
                 grid.set_Value(i, 2499, true);
-                grid.set_Value(2499,i, true);
-                grid.set_Value(-2500,i, true);
+                grid.set_Value(2499, i, true);
+                grid.set_Value(-2500, i, true);
 
             }
 
@@ -236,11 +235,8 @@ void SpecificWorker::fill_grid_with_obstacles() {
 * @param bState
 * @return
 */
-Eigen::Vector2f SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseState bState) {
-    // Coordenadas del target en el mundo real
-    auto[x, y, z] = target_buffer.get().value();//obtener del buffer
-    //Target mundo real
-    Eigen::Vector2f tw(x, z);
+Eigen::Vector2f SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseState bState, const Eigen::Vector2f &tw)
+{
 
     // Robot mundo robot
     Eigen::Vector2f rw(bState.x, bState.z);
@@ -301,8 +297,8 @@ SpecificWorker::draw_things(const RoboCompGenericBase::TBaseState &bState, const
 std::vector<SpecificWorker::tupla> SpecificWorker::calcularPuntos(float vOrigen, float wOrigen) {
     std::vector<tupla> vectorT;
     //Calculamos las posiciones futuras del robot y se insertan en un vector.
-    for (float dt = 0.3; dt < 1; dt += 0.1) { //velocidad robot
-        for (float v = 0; v <= 1000; v += 100) //advance
+    for (float dt = 0.2; dt < 1.5; dt += 0.1) { //velocidad robot
+        for (float v = 0; v <= 700; v += 60) //advance
         {
             for (float w = -3; w <= 3; w += 0.1) //rotacion
             {
@@ -382,14 +378,26 @@ SpecificWorker::obstaculos(std::vector<tupla> vector, float aph, const RoboCompL
  * @param z
  * @return vector ordenado
  */
-std::vector<SpecificWorker::tupla> SpecificWorker::ordenar(std::vector<tupla> vector, float x, float z) {
-    std::sort(vector.begin(), vector.end(), [x, z](const auto &a, const auto &b) {
-        const auto &[ax, ay, ca, cw, aa] = a;
-        const auto &[bx, by, ba, bw, bb] = b;
-        return ((ax - x) * (ax - x) + (ay - z) * (ay - z)) < ((bx - x) * (bx - x) + (by - z) * (by - z));
-    });
+SpecificWorker::tupla SpecificWorker::ordenar(std::vector<tupla> vector, float x, float z) {
+    const float A = 1, B = 0.01;
+    std::vector<std::tuple<float, tupla>> Vec;
+    //std::sort(vector.begin(), vector.end(), [x, z](const auto &a, const auto &b) {
+    for (auto v : vector) {
+        auto [ax, ay, ca, cw, aa] = v;
+        float x_grid = grid.transformar_mapa(ax);
+        float y_grid = grid.transformar_mapa(ay);
+        float a = grid.array[x_grid][y_grid].dist;
+        float b = sqrt(pow(ax - x, 2) + pow(ay - z, 2));
+        Vec.emplace_back(std::make_tuple(A * a + B * b, v));
+    }
+    auto minimo = std::min_element(Vec.begin(), Vec.end(),
+                                   [](auto &a, auto &b) { return std::get<0>(a) < std::get<0>(b); });
+    if (minimo != Vec.end()) {
+        return std::get<tupla>(*minimo);
+    } else {
+        return {};
+    }
 
-    return vector;
 }
 
 ///////////___________________________________///////////////
