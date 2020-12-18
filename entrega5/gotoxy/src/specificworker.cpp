@@ -126,24 +126,22 @@ void SpecificWorker::compute() {
     try { ldata = laser_proxy->getLaserData(); }
 
     catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
-    std::cout << " hola" << std::endl;
-    Eigen::Vector2f target;
-    if (auto data = target_buffer.get(); data.has_value())
-    {
+
+    static Eigen::Vector2f target;
+    if (auto data = target_buffer.get(); data.has_value()) {
         std::cout << " At target" << std::endl;
-        auto[x, y, z] = data.value();
-        target[0] = x; target[1] = z;
+        auto &[x, y, z] = data.value();
+        target[0] = x;
+        target[1] = z;
         // calcular la función de navegación
-        if (auto r = grid.get_value(x, z); r.has_value())
-        {
+        if (auto r = grid.get_value(x, z); r.has_value()) {
             auto celda = r.value();
             //buscar el vecino más bajo en el grid
             grid.navigation(celda);
         }
         //desde el target, avanzar con un fuego
     }
-    if (target_buffer.is_active())
-    {
+    if (target_buffer.is_active()) {
         //llamar a DWA con ese punto
         dynamicWindowApproach(bState, ldata, target);
     }
@@ -153,14 +151,15 @@ void SpecificWorker::compute() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata, const Eigen::Vector2f &target)
-{
+void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata,
+                                           const Eigen::Vector2f &target) {
     //coordenadas del target del mundo real al mundo del  robot
     Eigen::Vector2f tr = transformar_targetRW(bState, target);
     //distancia que debe recorrer hasta el target
     auto dist = tr.norm();
+  //  std::cout << "Dist: " << dist << std::endl;
     //preuntar si ha llegado
-    if (dist < 50) {
+    if (dist < 100) {
         differentialrobot_proxy->setSpeedBase(0, 0);
         target_buffer.set_task_finished();
         std::cout << __FUNCTION__ << " At target" << std::endl;
@@ -180,15 +179,19 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
         tupla vectorOrdenado = ordenar(vectorSInObs, tr.x(), tr.y());//vector ya ordenado
         //movimiento
 
-            auto[x, y, v, w, alpha] = vectorOrdenado;
-            std::cout << __FUNCTION__ << " " << x << " " << y << " " << v << " " << w << " " << alpha
-                      << std::endl;
-            try {
-                differentialrobot_proxy->setSpeedBase(std::min(v / 5, 1000.f), w);
+        auto[x, y, v, w, alpha] = vectorOrdenado;
+        std::cout << __FUNCTION__ << " " << x << " " << y << " " << v << " " << w << " " << alpha
+                  << std::endl;
+        try {
+            if(x==0 && y==0 && v==0 && w ==0 &&alpha ==0){//evitacion bloqueo esquinas
+                differentialrobot_proxy->setSpeedBase(0,1);
+                sleep(2);
             }
-            catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
-            draw_things(bState, ldata, vectorSInObs, vectorOrdenado);
-            return;
+            differentialrobot_proxy->setSpeedBase(std::min(v / 5, 1000.f), w);
+        }
+        catch (const Ice::Exception &e) { std::cout << e.what() << std::endl; }
+        draw_things(bState, ldata, vectorSInObs, vectorOrdenado);
+        return;
     }
 }
 
@@ -235,8 +238,8 @@ void SpecificWorker::fill_grid_with_obstacles() {
 * @param bState
 * @return
 */
-Eigen::Vector2f SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseState bState, const Eigen::Vector2f &tw)
-{
+Eigen::Vector2f
+SpecificWorker::transformar_targetRW(RoboCompGenericBase::TBaseState bState, const Eigen::Vector2f &tw) {
 
     // Robot mundo robot
     Eigen::Vector2f rw(bState.x, bState.z);
@@ -379,16 +382,17 @@ SpecificWorker::obstaculos(std::vector<tupla> vector, float aph, const RoboCompL
  * @return vector ordenado
  */
 SpecificWorker::tupla SpecificWorker::ordenar(std::vector<tupla> vector, float x, float z) {
-    const float A = 1, B = 0.01;
+    const float A = 1, B = 1, C = 2;
     std::vector<std::tuple<float, tupla>> Vec;
     //std::sort(vector.begin(), vector.end(), [x, z](const auto &a, const auto &b) {
     for (auto v : vector) {
-        auto [ax, ay, ca, cw, aa] = v;
+        auto[ax, ay, ca, cw, aa] = v;
         float x_grid = grid.transformar_mapa(ax);
         float y_grid = grid.transformar_mapa(ay);
         float a = grid.array[x_grid][y_grid].dist;
         float b = sqrt(pow(ax - x, 2) + pow(ay - z, 2));
-        Vec.emplace_back(std::make_tuple(A * a + B * b, v));
+        float c = C * fabs(cw);
+        Vec.emplace_back(std::make_tuple(A * a + B * b + C * c, v));
     }
     auto minimo = std::min_element(Vec.begin(), Vec.end(),
                                    [](auto &a, auto &b) { return std::get<0>(a) < std::get<0>(b); });
@@ -399,6 +403,7 @@ SpecificWorker::tupla SpecificWorker::ordenar(std::vector<tupla> vector, float x
     }
 
 }
+
 
 ///////////___________________________________///////////////
 int SpecificWorker::startup_check() {

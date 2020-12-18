@@ -29,7 +29,7 @@ public:
             for (int j = hmin;
                  j < width / 2; j += tile, l++)//recorriendo coordenadas de la celda, indexada por tile(100 en 100)
             {
-                array[k][l] = Value{false, nullptr, nullptr, i, j,k,l,-1};//coordenadas del centro
+                array[k][l] = Value{false, nullptr, nullptr, i, j, k, l, -1};//coordenadas del centro
             }
         }
     };
@@ -100,8 +100,7 @@ public:
      */
     void set_Value(int x, int z, bool v) {
 
-        if (auto r = transformar(x,
-                                 z); r.has_value())               //metodo que pases x,z y devuelva i,j, acceder a valores del mundo
+        if (auto r = transformar(x, z); r.has_value())//metodo que pases x,z y devuelva i,j, acceder a valores del mundo
         {
             auto[i, j] = r.value();
             array[i][j].occupied = v;
@@ -111,10 +110,6 @@ public:
                 array[i][j].paint_cell->setBrush(QColor("Green"));
         }
     }
-//    void set_ocuppied_w(int x, int y){
-//        auto [i,j] = transformar(x,y);
-//
-//    }
     /**
      * devolvemos el valor de la coordenada x,z
      * @param x
@@ -122,13 +117,15 @@ public:
      * @return
      */
     std::optional<Value> get_value(int x, int z) {
-         if(auto v = transformar(x,z); v.has_value()){
-             auto [x,y] = v.value();
-             return array[x][y];
-         }
-         else{
-             return{};
-         }
+        if (auto v = transformar(x, z); v.has_value()) {
+            auto[x, y] = v.value();
+            return array[x][y];
+        } else {
+            return {};
+        }
+    }
+    float getDist(float x, float y){
+
     }
 
     bool get_occupied(int x, int z) {
@@ -164,12 +161,13 @@ public:
         for (auto[dk, dl] : lista_coor_de_vecinos) {
             int k = v.k + dk;        // OJO hay que añadir al struct Value las coordenadas de array
             int l = v.l + dl;
- //           if (k >= -2500 && k < 2500 && l >= -2500 && l < 2500) {   //Limites
-                if (k>0 and l>0 and l<array.size()and k<array.size() and !array[k][l].occupied and array[k][l].dist==-1) {
-                    this->array[k][l].dist = dist;
-                    this->array[k][l].text_cell->setPlainText(QString::number(dist));
-                    lista.push_back(this->array[k][l]);
-                }
+            //           if (k >= -2500 && k < 2500 && l >= -2500 && l < 2500) {   //Limites
+            if (k > 0 and l > 0 and l < array.size() and k < array.size() and !array[k][l].occupied and
+                array[k][l].dist == -1) {
+                this->array[k][l].dist = dist;
+                this->array[k][l].text_cell->setPlainText(QString::number(dist));
+                lista.push_back(this->array[k][l]);
+            }
             //}
         }
 
@@ -180,7 +178,7 @@ public:
         reset();
         int dist = 0;
         auto listaCasillas1 = vecinos(v, dist);
-        std::vector<Value> listaCasillas2={};
+        std::vector<Value> listaCasillas2 = {};
 
         bool fin = false;
         while (!fin) {

@@ -94,13 +94,13 @@ private:
     Target<Tpose> target_buffer;
     Tpose target;
     using tupla = std::tuple<float, float, float, float, float>;
-    Eigen::Vector2f transformar_targetRW( RoboCompGenericBase::TBaseState bState);
+    Eigen::Vector2f transformar_targetRW( RoboCompGenericBase::TBaseState bState, const Eigen::Vector2f &target);
 
     //e4
     std::vector<tupla> calcularPuntos(float vOrigen,  float wOrigen);
     tupla ordenar(std::vector<tupla> vector, float x, float z);
     std::vector<tupla> obstaculos(std::vector<tupla> vector, float aph,const RoboCompLaser::TLaserData &ldata);
-    void dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata);
+    void dynamicWindowApproach(RoboCompGenericBase::TBaseState bState, RoboCompLaser::TLaserData &ldata, const Eigen::Vector2f &target);
     void fill_grid_with_obstacles();
 
     //draw
