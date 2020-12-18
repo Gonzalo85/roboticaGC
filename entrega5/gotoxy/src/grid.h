@@ -161,14 +161,12 @@ public:
         for (auto[dk, dl] : lista_coor_de_vecinos) {
             int k = v.k + dk;        // OJO hay que añadir al struct Value las coordenadas de array
             int l = v.l + dl;
-            //           if (k >= -2500 && k < 2500 && l >= -2500 && l < 2500) {   //Limites
             if (k > 0 and l > 0 and l < array.size() and k < array.size() and !array[k][l].occupied and
                 array[k][l].dist == -1) {
                 this->array[k][l].dist = dist;
                 this->array[k][l].text_cell->setPlainText(QString::number(dist));
                 lista.push_back(this->array[k][l]);
             }
-            //}
         }
 
         return lista;

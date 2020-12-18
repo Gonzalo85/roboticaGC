@@ -96,16 +96,9 @@ void SpecificWorker::initialize(int period) {
 
     // grid
     grid.create_graphic_items(scene, graphicsView);//crea todos los elementos graficos
-    // recorrer las cajas y poner a ocupado todos las celdas que caigan
-    //poiscion del robot a rojo, ocupada
-    //  grid.set_Value(bState.x, bState.z, true);
 
     //Pintar cajas y obstaculos
     fill_grid_with_obstacles();
-
-
-
-    // recorrer las pared y poner las celdas a rojo
 
     this->Period = 100;
     if (this->startup_check_flag) {
@@ -157,7 +150,6 @@ void SpecificWorker::dynamicWindowApproach(RoboCompGenericBase::TBaseState bStat
     Eigen::Vector2f tr = transformar_targetRW(bState, target);
     //distancia que debe recorrer hasta el target
     auto dist = tr.norm();
-  //  std::cout << "Dist: " << dist << std::endl;
     //preuntar si ha llegado
     if (dist < 100) {
         differentialrobot_proxy->setSpeedBase(0, 0);
@@ -259,7 +251,7 @@ void
 SpecificWorker::draw_things(const RoboCompGenericBase::TBaseState &bState, const RoboCompLaser::TLaserData &ldata,
                             const std::vector<tupla> &puntos, const tupla &front) {
     //draw robot
-    //innerModel->updateTransformValues("base", bState.x, 0, bState.z, 0, bState.alpha, 0);
+
     robot_polygon->setRotation(qRadiansToDegrees(-bState.alpha));
     robot_polygon->setPos(bState.x, bState.z);
     graphicsView->resize(this->size());
@@ -384,7 +376,6 @@ SpecificWorker::obstaculos(std::vector<tupla> vector, float aph, const RoboCompL
 SpecificWorker::tupla SpecificWorker::ordenar(std::vector<tupla> vector, float x, float z) {
     const float A = 1, B = 1, C = 2;
     std::vector<std::tuple<float, tupla>> Vec;
-    //std::sort(vector.begin(), vector.end(), [x, z](const auto &a, const auto &b) {
     for (auto v : vector) {
         auto[ax, ay, ca, cw, aa] = v;
         float x_grid = grid.transformar_mapa(ax);
